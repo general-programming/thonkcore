@@ -1,0 +1,22 @@
+name: springcord
+version: 0.1.0
+
+authors:
+  - Henry Le Grys <henry@legrys.info>
+
+description: |
+  Scriptable Discord bouncer proxy
+
+dependencies:
+    discordcr:
+        github: meew0/discordcr
+
+targets:
+    springcord:
+        main: src/springcord.cr
+
+# development_dependencies:
+#   webmock:
+#     github: manastech/webmock.cr
+
+license: MIT
