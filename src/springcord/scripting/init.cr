@@ -5,13 +5,22 @@ module Springcord
     class ScriptRuntimeError < Exception
     end
 
+    class EngineStorage
+        def initialize
+            @modules = {} of String => String
+        end
+
+        getter modules
+    end
+
     class ScriptingEngine
         def initialize
             @config = Wren::WrenConfiguration.new
-            @modules = {} of String => String
+            @storage = EngineStorage.new
 
             Wren.initConfig(pointerof(@config))
 
+            @config.user_data = Box.box(@storage)
             @config.reallocate_fn  = ->(mem : Pointer(Void), size : LibC::SizeT) {
                 if mem.null? && size > 0
                     return GC.malloc(size)
@@ -46,33 +55,39 @@ module Springcord
                 end
             }
 
-            @config.load_module_fn = ->self.load_module(Wren::WrenVM, Pointer(UInt8))
-            # @config.bind_class_fn = ->self.bind_class(Wren::WrenVM, String, String)
-            # @config.bind_method_fn = ->self.bind_method(Wren::WrenVM, String, String, Bool, String)
+            @config.load_module_fn = ->(vm : Wren::WrenVM, name_ptr : Pointer(UInt8)) {
+                storage = Box(EngineStorage).unbox(Wren.getUserData(vm))
+                name = String.new(name_ptr)
+
+                if storage.modules.has_key?(name)
+                    return storage.modules[name].to_unsafe
+                end
+
+                return Pointer(UInt8).null
+            }
+
+            @config.bind_class_fn = ->(vm : Wren::WrenVM, module_name_ptr : Pointer(UInt8), class_name_ptr : Pointer(UInt8)) {
+                storage = Box(EngineStorage).unbox(Wren.getUserData(vm))
+                module_name = String.new(module_name_ptr)
+                class_name = String.new(class_name_ptr)
+
+                Wren::WrenForeignClassMethods.new
+            }
+
+            @config.bind_method_fn = ->(vm : Wren::WrenVM, module_name_ptr : Pointer(UInt8), class_name_ptr : Pointer(UInt8), is_static : Bool, signature_ptr : Pointer(UInt8)) {
+                storage = Box(EngineStorage).unbox(Wren.getUserData(vm))
+                module_name = String.new(module_name_ptr)
+                class_name = String.new(class_name_ptr)
+                signature = String.new(signature_ptr)
+
+                Wren::WrenForeignMethod.new(Pointer(Void).null, Pointer(Void).null)
+            }
 
             @vm = Wren.newVM(pointerof(@config))
         end
 
         def finalize
             Wren.freeVM(vm)
-        end
-
-        private def load_module(vm : Wren::WrenVM, name_ptr : Pointer(UInt8)) : Pointer(UInt8)
-            name = String.new(name_ptr)
-
-            if @modules.has_key?(name)
-                return @modules[name].to_unsafe
-            end
-
-            return Pointer(UInt8).null
-        end
-
-        private def bind_class(vm : Wren::WrenVM, module_name : String, class_name : String)
-
-        end
-
-        private def bind_method(vm : Wren::WrenVM, module_name : String, class_Name : String, is_static : Bool, signature : String)
-
         end
 
         def vm

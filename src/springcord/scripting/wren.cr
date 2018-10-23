@@ -2,7 +2,7 @@
 lib Wren
     type WrenVM = Void*
     type WrenHandle = Void*
-    type WrenForeignMethod = ((WrenVM) ->)
+    alias WrenForeignMethod = ((WrenVM) ->)
 
     struct WrenForeignClassMethods
         allocate : WrenForeignMethod
@@ -39,7 +39,7 @@ lib Wren
     fun newVM = wrenNewVM(config : WrenConfiguration*) : WrenVM
     fun freeVM = wrenFreeVM(vm : WrenVM)
     fun runGC = wrenCollectGarbage(vm : WrenVM)
-    fun getUserData = wrenGetUserData(vm : WrenVM)
+    fun getUserData = wrenGetUserData(vm : WrenVM) : Void*
     fun setUserData = wrenSetUserData(vm : WrenVM, user_data : Void*)
 
     fun interpret = wrenInterpret(vm : WrenVM, source : UInt8*) : WrenInterpretResult
