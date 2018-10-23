@@ -8,7 +8,22 @@ module Springcord
     class ScriptingEngine
         def initialize
             @config = Wren::WrenConfiguration.new
+            @modules = {} of String => String
+
             Wren.initConfig(pointerof(@config))
+
+            @config.reallocate_fn  = ->(mem : Pointer(Void), size : LibC::SizeT) {
+                if mem.null? && size > 0
+                    return GC.malloc(size)
+                end
+
+                if size == 0
+                    GC.free(mem)
+                    return Pointer(Void).null
+                end
+
+                return GC.realloc(mem, size)
+            }
 
             @config.write_fn = ->(vm : Wren::WrenVM, text : Pointer(UInt8)) {
                 unless text.null?
@@ -31,11 +46,37 @@ module Springcord
                 end
             }
 
+            @config.load_module_fn = ->self.load_module(Wren::WrenVM, Pointer(UInt8))
+            # @config.bind_class_fn = ->self.bind_class(Wren::WrenVM, String, String)
+            # @config.bind_method_fn = ->self.bind_method(Wren::WrenVM, String, String, Bool, String)
+
             @vm = Wren.newVM(pointerof(@config))
         end
 
         def finalize
-            Wren.freeVM(@vm)
+            Wren.freeVM(vm)
+        end
+
+        private def load_module(vm : Wren::WrenVM, name_ptr : Pointer(UInt8)) : Pointer(UInt8)
+            name = String.new(name_ptr)
+
+            if @modules.has_key?(name)
+                return @modules[name].to_unsafe
+            end
+
+            return Pointer(UInt8).null
+        end
+
+        private def bind_class(vm : Wren::WrenVM, module_name : String, class_name : String)
+
+        end
+
+        private def bind_method(vm : Wren::WrenVM, module_name : String, class_Name : String, is_static : Bool, signature : String)
+
+        end
+
+        def vm
+            @vm.not_nil!
         end
 
         def eval(code : String)
@@ -44,7 +85,7 @@ module Springcord
             code.to_slice.copy_to(term)
             term[len] = 0_u8
 
-            result = Wren.interpret(@vm, term)
+            result = Wren.interpret(vm, term)
 
             case result
             when Wren::WrenInterpretResult::CompileError
