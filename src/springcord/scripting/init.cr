@@ -1,16 +1,48 @@
 module Springcord
-    class ScriptCompileError < Exception
+    class ScriptError < Exception
     end
 
-    class ScriptRuntimeError < Exception
+    class ScriptCompileError < ScriptError
+    end
+
+    class ScriptRuntimeError < ScriptError
     end
 
     class EngineStorage
         def initialize
             @modules = {} of String => String
+            @classes = {} of String => BoundForeignClass
         end
 
-        getter modules
+        getter modules, classes
+    end
+
+    class BoundForeignClass
+        def initialize(@class_name : String, clazz : T.class, @methods : Hash(String, Wren::WrenForeignMethod)) forall T
+            @class_callbacks = Wren::WrenForeignClassMethods.new
+
+            @class_callbacks.allocate = ->(vm : Wren::WrenVM) {
+                wren_ptr = Wren.createClass(vm, 0, 0, instance_sizeof(T)).as Pointer(T)
+                inst = T.new(vm)
+
+                wren_ptr.move_from(pointerof(inst), instance_sizeof(T))
+                nil
+            }
+        end
+
+        getter class_name, methods, class_callbacks
+    end
+
+    class ForeignClassBinder
+        def initialize(@class_name : String)
+            @methods = {} of String => Wren::WrenForeignMethod
+        end
+
+        getter methods
+
+        def bind_method(signature : String, &block : (Wren::WrenVM) ->)
+            @methods[signature] = block
+        end
     end
 
     class ScriptingEngine
@@ -63,6 +95,23 @@ module Springcord
                     return storage.modules[name].to_unsafe
                 end
 
+                module_path = File.expand_path(name)
+                if File.file?("#{module_path}.wren")
+                    return File.read("#{module_path}.wren").to_unsafe
+                end
+
+                if Dir.exists?(module_path)
+                    init_file = File.join(module_path, "init.wren")
+                    if File.file?(init_file)
+                        return File.read(init_file).to_unsafe
+                    end
+
+                    init_file = File.join(module_path, "#{name}.wren")
+                    if File.file?(init_file)
+                        return File.read(init_file).to_unsafe
+                    end
+                end
+
                 return Pointer(UInt8).null
             }
 
@@ -71,7 +120,11 @@ module Springcord
                 module_name = String.new(module_name_ptr)
                 class_name = String.new(class_name_ptr)
 
-                Wren::WrenForeignClassMethods.new
+                if storage.classes.has_key?(class_name)
+                    storage.classes[class_name].class_callbacks
+                else
+                    Wren::WrenForeignClassMethods.new
+                end
             }
 
             @config.bind_method_fn = ->(vm : Wren::WrenVM, module_name_ptr : Pointer(UInt8), class_name_ptr : Pointer(UInt8), is_static : Bool, signature_ptr : Pointer(UInt8)) {
@@ -80,7 +133,11 @@ module Springcord
                 class_name = String.new(class_name_ptr)
                 signature = String.new(signature_ptr)
 
-                Wren::WrenForeignMethod.new(Pointer(Void).null, Pointer(Void).null)
+                if storage.classes.has_key?(class_name)
+                    storage.classes[class_name].methods[signature]
+                else
+                    Wren::WrenForeignMethod.new(Pointer(Void).null, Pointer(Void).null)
+                end
             }
 
             @vm = Wren.newVM(pointerof(@config))
@@ -92,6 +149,14 @@ module Springcord
 
         def vm
             @vm.not_nil!
+        end
+
+        def bind_class(name : String, storage_class : T.class, &block : (ForeignClassBinder) ->) forall T
+            binder = ForeignClassBinder.new(name)
+            block.call(binder)
+
+            bound = BoundForeignClass.new(name, storage_class, binder.methods)
+            @storage.classes[name] = bound
         end
 
         def eval(code : String)
@@ -108,6 +173,13 @@ module Springcord
             when Wren::WrenInterpretResult::RuntimeError
                 raise ScriptRuntimeError.new("Snippet failed to evaluate")
             end
+        end
+
+        def eval_file(filename : String)
+            path = File.expand_path(filename)
+            contents = File.read(path)
+
+            self.eval(contents)
         end
     end
 end
