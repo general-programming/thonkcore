@@ -25,7 +25,7 @@ module Springcord
                 wren_ptr = Wren.createClass(vm, 0, 0, instance_sizeof(T)).as Pointer(T)
                 inst = T.new(vm)
 
-                wren_ptr.move_from(pointerof(inst), instance_sizeof(T))
+                wren_ptr.value = inst
                 nil
             }
         end

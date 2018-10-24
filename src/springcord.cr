@@ -3,6 +3,8 @@ require "json"
 require "./springcord/scripting/*"
 
 module Springcord
+    RUN_LOCK = Channel(Nil).new
+
     def self.main
         engine = Springcord::ScriptingEngine.new
 
@@ -10,6 +12,10 @@ module Springcord
 
         ptr = "import \"test\""
         engine.eval(ptr)
+
+        loop do
+            RUN_LOCK.receive
+        end
     end
 end
 
