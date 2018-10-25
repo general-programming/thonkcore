@@ -70,5 +70,36 @@ module Springcord
                 storage.server.close
             end
         end
+
+        engine.bind_class("Dispatcher", Springcord::EmptyStorage) do |binder|
+            binder.bind_method "on(_,_)" do |vm|
+                event_name = String.new(Wren.getString(vm, 1))
+                callback = Wren.getSlotHandle(vm, 2)
+
+                Springcord::EVENT_BUS.add_script_handler(event_name) do |args|
+                    Wren.ensureSlots(vm, args.size + 1)
+                    Wren.setSlotToHandle(vm, 0, callback)
+
+                    args.each_with_index { |v, i|
+                        if v.is_a?(Bool)
+                            Wren.setBool(vm, i + 1, v)
+                        elsif v.is_a?(String)
+                            Wren.setString(vm, i + 1, v)
+                        elsif v.is_a?(Bytes)
+                            Wren.setBytes(vm, i + 1, v.to_unsafe, v.bytesize)
+                        elsif v.responds_to?(:to_f64)
+                            Wren.setDouble(vm, i + 1, v.to_f64)
+                        else
+                            raise "Cannot send type #{v.class} to Wren!"
+                        end
+                    }
+
+                    sig_args = args.join(",") { |v| "_" }
+                    call_handle = Wren.makeCallHandle(vm, "call(#{sig_args})")
+
+                    Wren.call(vm, call_handle)
+                end
+            end
+        end
     end
 end

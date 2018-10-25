@@ -8,6 +8,11 @@ module Springcord
     class ScriptRuntimeError < ScriptError
     end
 
+    class EmptyStorage
+        def initialize(vm : Wren::WrenVM)
+        end
+    end
+
     class EngineStorage
         def initialize
             @modules = {} of String => String

@@ -1,5 +1,6 @@
 require "discordcr"
 require "json"
+require "./springcord/*"
 require "./springcord/scripting/*"
 
 module Springcord
@@ -13,9 +14,9 @@ module Springcord
         ptr = "import \"test\""
         engine.eval(ptr)
 
-        loop do
-            RUN_LOCK.receive
-        end
+        Springcord::EVENT_BUS.dispatch("hello", "developer")
+
+        RUN_LOCK.receive
     end
 end
 

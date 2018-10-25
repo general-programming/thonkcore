@@ -7,13 +7,17 @@ module Springcord
 
     abstract class AbstractRemoteClient
         abstract def dispatch_event(event_name : String, **params)
-        abstract def on_command(command_name : String, &block : () ->)
+        abstract def on_command(command_name : String, &block)
     end
 
     class ResponsePacketWrapper(T)
         @type : String
         @event_name : String?
         @data : T
+
+        def initialize(@type, @data)
+
+        end
 
         def to_json(builder : JSON::Builder)
             builder.object do
