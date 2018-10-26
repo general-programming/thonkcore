@@ -14,7 +14,7 @@ module Springcord
         ptr = "import \"test\""
         engine.eval(ptr)
 
-        Springcord::EVENT_BUS.dispatch("hello", "developer")
+        Springcord::EVENT_BUS.dispatch("hello", "Henry", "welcome to wren")
 
         RUN_LOCK.receive
     end

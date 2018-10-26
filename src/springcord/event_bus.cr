@@ -1,6 +1,6 @@
 module Springcord
     alias WrenTypes = Bool | Float64 | String | Bytes
-    alias EventBusCollection = Tuple(WrenTypes)
+    alias EventBusCollection = Array(WrenTypes)
     alias EventBusHandlers = Array(Proc(EventBusCollection, Nil))
 
     class EventBus
@@ -17,8 +17,12 @@ module Springcord
         end
 
         def dispatch(event : String, *args : WrenTypes)
+            # we have to rebuild the array
+            arr = args.to_a
+            argarray = EventBusCollection.new(arr.size) { |i| arr[i] }
+
             if hdlrs = @handlers[event]
-                hdlrs.each { |h| h.call(args.as(EventBusCollection)) }
+                hdlrs.each { |h| h.call(argarray) }
             end
         end
     end
