@@ -21,7 +21,7 @@ module Springcord
             arr = args.to_a
             argarray = EventBusCollection.new(arr.size) { |i| arr[i] }
 
-            if hdlrs = @handlers[event]
+            if hdlrs = @handlers[event]?
                 hdlrs.each { |h| h.call(argarray) }
             end
         end
