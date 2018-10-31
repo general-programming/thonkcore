@@ -20,6 +20,10 @@ module Springcord
 
         RUN_LOCK.receive
     end
+
+    macro read_bundled(filename)
+        {{ run("./read", filename).stringify }}
+    end
 end
 
 Springcord.main

@@ -67,6 +67,8 @@ module Springcord
                     call_handle = Wren.makeCallHandle(vm, "call(#{sig_args})")
 
                     Wren.call(vm, call_handle)
+
+                    Wren.releaseHandle(vm, call_handle)
                 end
             end
         end

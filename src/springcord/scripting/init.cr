@@ -17,6 +17,9 @@ module Springcord
         def initialize
             @modules = {} of String => String
             @classes = {} of String => BoundForeignClass
+
+            @modules["thonk"] = Springcord.read_bundled("wren/thonk.wren")
+            @modules["thonk.dispatch"] = Springcord.read_bundled("wren/dispatcher.wren")
         end
 
         getter modules, classes
