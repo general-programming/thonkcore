@@ -4,7 +4,7 @@ module Springcord
     alias EventBusHandlers = Array(Proc(EventBusCollection, Nil))
 
     class EventBus
-        def initialize()
+        def initialize
             @handlers = {} of String => EventBusHandlers
         end
 

@@ -1,6 +1,11 @@
-foreign class HTTPServer {
+foreign class HttpContext {
     construct new() {}
 
-    foreign listen(port)
-    foreign setHandler(fn)
+    foreign method
+    foreign path
+    foreign body
+    foreign getHeader(name)
+
+    foreign setStatus(statusCode)
+    foreign write(response)
 }

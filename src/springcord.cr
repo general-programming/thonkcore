@@ -7,6 +7,8 @@ module Springcord
     RUN_LOCK = Channel(Nil).new
 
     def self.main
+        config = Springcord::Config.new
+        comms = Springcord::CommunicationManager.new(config)
         engine = Springcord::ScriptingEngine.new
 
         Springcord.bind_classes(engine)

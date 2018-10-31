@@ -1,7 +1,22 @@
 module Springcord
     class CommunicationManager
-        def initialize
+        def initialize(@config : Springcord::Config)
             @clients = [] of AbstractRemoteClient
+            @workers = [] of Springcord::Runnable
+        end
+
+        getter clients, config
+
+        def start
+            @workers.each do |task|
+                spawn do
+                    task.start
+                end
+            end
+        end
+
+        def add_client(client : AbstractRemoteClient)
+            @clients << client
         end
     end
 

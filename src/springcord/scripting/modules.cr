@@ -1,10 +1,6 @@
 require "http/server"
 
 module Springcord
-    # def self.unbox_foreign(vm : Wren::WrenVM, clazz : T.class) forall T
-    #     Wren.getForeign(vm, 0).as(Pointer(Pointer(T))).value.value
-    # end
-
     class HTTPServerStorage
         @handle_method : Wren::WrenHandle?
 
@@ -42,34 +38,7 @@ module Springcord
     end
 
     def self.bind_classes(engine : Springcord::ScriptingEngine)
-        engine.bind_class("HTTPServer", HTTPServerStorage) do |binder|
-            binder.bind_method "listen(_)" do |vm|
-                Wren.ensureSlots(vm, 2)
-                storage = Wren.getForeign(vm, 0).as(Pointer(HTTPServerStorage)).value
-                port = Wren.getDouble(vm, 1).to_i32
-
-                storage.server.bind_tcp(port)
-                puts "Bound to #{port}"
-
-                spawn do
-                    storage.server.listen
-                end
-            end
-
-            binder.bind_method "setHandler(_)" do |vm|
-                Wren.ensureSlots(vm, 2)
-                storage = Wren.getForeign(vm, 0).as(Pointer(HTTPServerStorage)).value
-                handler = Wren.getSlotHandle(vm, 1)
-
-                storage.handle_method = handler
-            end
-
-            binder.bind_method "close()" do |vm|
-                storage = Wren.getForeign(vm, 0).as(Pointer(HTTPServerStorage)).value
-
-                storage.server.close
-            end
-        end
+        # engine.bind_class("HttpContext")
 
         engine.bind_class("Dispatcher", Springcord::EmptyStorage) do |binder|
             binder.bind_method "on(_,_)" do |vm|
