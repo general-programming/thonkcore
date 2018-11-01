@@ -38,7 +38,54 @@ module Springcord
     end
 
     def self.bind_classes(engine : Springcord::ScriptingEngine)
-        # engine.bind_class("HttpContext")
+        engine.bind_class("HttpContext", HTTP::Server::Context) do |binder|
+            binder.bind_method "method" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+
+                Wren.setString(vm, 0, ctx.request.method)
+            end
+
+            binder.bind_method "path" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+
+                Wren.setString(vm, 0, ctx.request.path)
+            end
+
+            binder.bind_method "body" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+
+                if body = ctx.request.body
+                    Wren.setString(vm, 0, body.gets_to_end)
+                else
+                    Wren.setNull(vm, 0)
+                end
+            end
+
+            binder.bind_method "getHeader(_)" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+                name = String.new Wren.getString(vm, 1)
+
+                if val = ctx.request.headers[name]?
+                    Wren.setString(vm, 0, val)
+                else
+                    Wren.setNull(vm, 0)
+                end
+            end
+
+            binder.bind_method "setStatus(_)" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+                code = Wren.getDouble(vm, 1).to_i32
+
+                ctx.response.status_code = code
+            end
+
+            binder.bind_method "write(_)" do |vm|
+                ctx = Wren.getForeign(vm, 0).as(Pointer(HTTP::Server::Context)).value
+                text = String.new Wren.getString(vm, 1)
+
+                ctx.response.print text
+            end
+        end
 
         engine.bind_class("Dispatcher", Springcord::EmptyStorage) do |binder|
             binder.bind_method "on(_,_)" do |vm|
@@ -56,6 +103,8 @@ module Springcord
                             Wren.setString(vm, i + 1, v)
                         elsif v.is_a?(Bytes)
                             Wren.setBytes(vm, i + 1, v.to_unsafe, v.bytesize)
+                        elsif v.is_a?(Wren::WrenHandle)
+                            Wren.setSlotToHandle(vm, i + 1, v)
                         elsif v.responds_to?(:to_f64)
                             Wren.setDouble(vm, i + 1, v.to_f64)
                         else

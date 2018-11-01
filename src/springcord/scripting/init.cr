@@ -20,22 +20,30 @@ module Springcord
 
             @modules["thonk"] = Springcord.read_bundled("wren/thonk.wren")
             @modules["thonk.dispatch"] = Springcord.read_bundled("wren/dispatcher.wren")
+            @modules["thonk.http"] = Springcord.read_bundled("wren/http_server.wren")
         end
 
         getter modules, classes
     end
 
     class BoundForeignClass
-        def initialize(@class_name : String, clazz : T.class, @methods : Hash(String, Wren::WrenForeignMethod)) forall T
+        @class_name : String
+        @methods : Hash(String, Wren::WrenForeignMethod)
+
+        def initialize(binder : ForeignClassBinder, clazz : T.class) forall T
             @class_callbacks = Wren::WrenForeignClassMethods.new
+            @class_name = binder.class_name
+            @methods = binder.methods
 
-            @class_callbacks.allocate = ->(vm : Wren::WrenVM) {
-                wren_ptr = Wren.createClass(vm, 0, 0, instance_sizeof(T)).as Pointer(T)
-                inst = T.new(vm)
+            {% if T.methods.find { |m| m.name == "initialize".id }.args[0].restriction == Wren::WrenVM %}
+                @class_callbacks.allocate = ->(vm : Wren::WrenVM) {
+                    wren_ptr = Wren.createClass(vm, 0, 0, instance_sizeof(T)).as Pointer(T)
+                    inst = T.new(vm)
 
-                wren_ptr.value = inst
-                nil
-            }
+                    wren_ptr.value = inst
+                    nil
+                }
+            {% end %}
         end
 
         getter class_name, methods, class_callbacks
@@ -44,9 +52,11 @@ module Springcord
     class ForeignClassBinder
         def initialize(@class_name : String)
             @methods = {} of String => Wren::WrenForeignMethod
+            @auto_allocate = true
         end
 
-        getter methods
+        property auto_allocate
+        getter class_name, methods
 
         def bind_method(signature : String, &block : (Wren::WrenVM) ->)
             @methods[signature] = block
@@ -163,7 +173,7 @@ module Springcord
             binder = ForeignClassBinder.new(name)
             block.call(binder)
 
-            bound = BoundForeignClass.new(name, storage_class, binder.methods)
+            bound = BoundForeignClass.new(binder, storage_class)
             @storage.classes[name] = bound
         end
 

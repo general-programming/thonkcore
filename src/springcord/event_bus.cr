@@ -1,5 +1,5 @@
 module Springcord
-    alias WrenTypes = Bool | Float64 | String | Bytes
+    alias WrenTypes = Bool | Float64 | String | Bytes | Wren::WrenHandle
     alias EventBusCollection = Array(WrenTypes)
     alias EventBusHandlers = Array(Proc(EventBusCollection, Nil))
 

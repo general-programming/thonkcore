@@ -8,8 +8,11 @@ module Springcord
 
     def self.main
         config = Springcord::Config.new
+        taskmgr = Springcord::TaskManager.new
         comms = Springcord::CommunicationManager.new(config)
         engine = Springcord::ScriptingEngine.new
+
+        taskmgr << Springcord::ThonkServer.new(comms, Springcord::WrenHttpHandler.new(engine))
 
         Springcord.bind_classes(engine)
 

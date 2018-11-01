@@ -2,18 +2,9 @@ module Springcord
     class CommunicationManager
         def initialize(@config : Springcord::Config)
             @clients = [] of AbstractRemoteClient
-            @workers = [] of Springcord::Runnable
         end
 
         getter clients, config
-
-        def start
-            @workers.each do |task|
-                spawn do
-                    task.start
-                end
-            end
-        end
 
         def add_client(client : AbstractRemoteClient)
             @clients << client
@@ -56,7 +47,7 @@ module Springcord
                 args = data["args"].as_a
 
                 if @handlers.has_key?(cmd)
-                    @handlers[cmd].call(args)
+                    @handlers[cmd].each { |h| h.call(args) }
                 end
             end
         end
